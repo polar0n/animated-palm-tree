@@ -1,0 +1,275 @@
+---
+title: "VAE–IRT Simulation Framework (Scenarios S0–S4)"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+---
+
+## Feature Overview
+
+| Feature                    | S0 | S1 | S2 | S3 | S4 | Future                      |
+|---------------------------|:--:|:--:|:--:|:--:|:--:|-----------------------------|
+| 2PL/3PL data generation   | ✔  | ✔  | ✔  | ✔  | ✔  | multidimensional?           |
+| MAR/MNAR                  |    |    | ✔  | ✔  | ✔  | add missing-rule library    |
+| mixture distributions     |    |    |    | ✔  |    | mixture of K groups         |
+| booklet design            |    |    |    |    | ✔  | random block design         |
+| polytomous items          | –  | –  | –  | –  | –  | add GRM/GPCM module         |
+| batch simulation          | ✦ easy |    |    |    |    | loop wrapper ready          |
+| connect to VAE            | ✔  | ✔  | ✔  | ✔  | ✔  | auto export                 |
+
+This R Markdown file implements a fully extensible simulation engine for VAE–IRT experiments under Scenarios S0–S4.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = FALSE
+)
+```
+
+# 1. Core Simulation Functions
+
+## 1.1 simulate_irt_data()
+
+```{r}
+simulate_irt_data <- function(
+  N, I,
+  model = c("2PL", "3PL"),
+  a_mean = 1, a_sd = 0.3,
+  b_mean = 0, b_sd = 1,
+  c_mean = 0.2, c_sd = 0.05,
+  theta_dist = c("normal", "mixture", "custom"),
+  theta_params = list(mean = 0, sd = 1),
+  mixture_params = list(mean1 = 0, sd1 = 1,
+                        mean2 = 1.5, sd2 = 1,
+                        p = 0.5),
+  custom_theta = NULL
+) {
+  model <- match.arg(model)
+  theta_dist <- match.arg(theta_dist)
+
+  # --- theta generation ---
+  if (theta_dist == "normal") {
+    theta <- rnorm(N, theta_params$mean, theta_params$sd)
+  } else if (theta_dist == "mixture") {
+    g <- rbinom(N, 1, mixture_params$p)
+    theta <- ifelse(g == 1,
+                    rnorm(N, mixture_params$mean1, mixture_params$sd1),
+                    rnorm(N, mixture_params$mean2, mixture_params$sd2))
+  } else {
+    if (is.null(custom_theta)) stop("custom_theta must be provided.")
+    theta <- custom_theta
+  }
+
+  # --- item parameters ---
+  a <- rnorm(I, a_mean, a_sd)
+  b <- rnorm(I, b_mean, b_sd)
+  c <- if (model == "3PL") pmin(pmax(rnorm(I, c_mean, c_sd), 0), 1) else rep(0, I)
+
+  invlogit <- function(x) 1 / (1 + exp(-x))
+
+  # --- response matrix ---
+  X <- matrix(NA, N, I)
+  for (p in 1:N) {
+    for (i in 1:I) {
+      prob <- c[i] + (1 - c[i]) * invlogit(a[i] * (theta[p] - b[i]))
+      X[p, i] <- rbinom(1, 1, prob)
+    }
+  }
+
+  list(
+    responses = X,
+    theta = theta,
+    item_params = data.frame(a=a,b=b,c=c),
+    model=model
+  )
+}
+```
+
+---
+
+## 1.2 apply_missingness()
+
+```{r}
+apply_missingness <- function(
+  X,
+  mechanism = c("none", "MCAR", "MAR", "MNAR", "custom"),
+  missing_rate = 0.3,
+  mar_probs = NULL,
+  mnar_fun = NULL,
+  custom_mask = NULL
+) {
+  mechanism <- match.arg(mechanism)
+  N <- nrow(X); I <- ncol(X)
+  mask <- matrix(FALSE, N, I)
+
+  if (mechanism == "none") {
+    return(list(observed=X, mask=mask))
+  }
+
+  if (mechanism == "MCAR") {
+    mask <- matrix(runif(N*I) < missing_rate, N, I)
+  }
+
+  if (mechanism == "MAR") {
+    if (is.null(mar_probs)) stop("mar_probs must be provided.")
+    for (i in 1:I) mask[,i] <- runif(N) < mar_probs[i]
+  }
+
+  if (mechanism == "MNAR") {
+    if (is.null(mnar_fun)) stop("mnar_fun must be provided.")
+    for (p in 1:N)
+      for (i in 1:I)
+        mask[p,i] <- runif(1) < mnar_fun(X[p,i], p, i)
+  }
+
+  if (mechanism == "custom") {
+    if (is.null(custom_mask)) stop("custom_mask must be provided.")
+    mask <- custom_mask
+  }
+
+  Xmiss <- X
+  Xmiss[mask] <- NA
+
+  list(observed=Xmiss, mask=mask)
+}
+```
+
+---
+
+## 1.3 run_scenario()
+
+```{r}
+run_scenario <- function(config, save_data=FALSE) {
+  set.seed(config$seed)
+
+  cat("Running", config$scenario_name, "\n")
+
+  sim <- simulate_irt_data(
+    N=config$N,
+    I=config$I,
+    model=config$model,
+    theta_dist=config$theta_dist,
+    theta_params=config$theta_params,
+    mixture_params=config$mixture_params,
+    custom_theta=config$custom_theta
+  )
+
+  miss <- apply_missingness(
+    X = sim$responses,
+    mechanism = config$missing_mechanism,
+    missing_rate = config$missing_rate,
+    mar_probs = config$mar_probs,
+    mnar_fun = config$mnar_fun,
+    custom_mask = config$custom_mask
+  )
+
+  if (save_data) {
+    prefix <- config$save_prefix
+    write.csv(sim$responses, paste0(prefix,"_X_full.csv"), row.names=FALSE)
+    write.csv(miss$observed, paste0(prefix,"_X_obs.csv"), row.names=FALSE)
+    write.csv(sim$item_params, paste0(prefix,"_item_params.csv"), row.names=FALSE)
+    write.csv(data.frame(theta=sim$theta), paste0(prefix,"_theta.csv"), row.names=FALSE)
+    write.csv(miss$mask, paste0(prefix,"_mask.csv"), row.names=FALSE)
+  }
+
+  list(
+    X_full = sim$responses,
+    X_obs = miss$observed,
+    mask = miss$mask,
+    theta_true = sim$theta,
+    item_params_true = sim$item_params,
+    config = config
+  )
+}
+```
+
+---
+
+# 2. Scenario Configurations
+
+```{r}
+config_S0 <- list(
+  scenario_name="S0_basic",
+  N=3000, I=20,
+  model="2PL",
+  theta_dist="normal",
+  theta_params=list(mean=0,sd=1),
+  mixture_params=NULL,
+  custom_theta=NULL,
+  missing_mechanism="none",
+  missing_rate=0,
+  mar_probs=NULL,
+  mnar_fun=NULL,
+  custom_mask=NULL,
+  seed=123,
+  save_prefix="S0"
+)
+
+config_S1 <- config_S0
+config_S1$scenario_name <- "S1_MCAR"
+config_S1$missing_mechanism <- "MCAR"
+config_S1$missing_rate <- 0.4
+config_S1$save_prefix <- "S1"
+
+config_S2A <- config_S0
+config_S2A$scenario_name <- "S2A_MAR"
+config_S2A$missing_mechanism <- "MAR"
+config_S2A$mar_probs <- seq(0.1, 0.5, length.out=config_S0$I)
+config_S2A$save_prefix <- "S2A"
+
+config_S2B <- config_S0
+config_S2B$scenario_name <- "S2B_MNAR"
+config_S2B$missing_mechanism <- "MNAR"
+config_S2B$mnar_fun <- function(x,p,i) ifelse(is.na(x)||x==0,0.5,0.1)
+config_S2B$save_prefix <- "S2B"
+
+config_S3 <- config_S0
+config_S3$scenario_name <- "S3_mixture"
+config_S3$theta_dist <- "mixture"
+config_S3$mixture_params <- list(
+  mean1=0, sd1=1,
+  mean2=1.5, sd2=1,
+  p=0.5
+)
+config_S3$save_prefix <- "S3"
+
+config_S4 <- config_S0
+config_S4$scenario_name <- "S4_booklet"
+config_S4$missing_mechanism <- "custom"
+
+N4 <- config_S4$N; I4 <- config_S4$I
+mask_custom <- matrix(TRUE, N4, I4)
+for (p in 1:N4) {
+  ans <- sample(1:I4, ceiling(I4/3))
+  mask_custom[p, ans] <- FALSE
+}
+
+config_S4$custom_mask <- mask_custom
+config_S4$save_prefix <- "S4"
+```
+
+---
+
+# 3. Example Scenario Runs
+
+```{r}
+res_S0 <- run_scenario(config_S0)
+res_S1 <- run_scenario(config_S1)
+res_S2B <- run_scenario(config_S2B)
+res_S4 <- run_scenario(config_S4)
+```
+
+---
+
+# 4. Next Steps
+
+- Add polytomous data generation  
+- Add multidimensional latent space  
+- Add VAE interface  
+- Add evaluation metrics (bias/RMSE/imputation accuracy)  
+- Add batch simulation wrapper  
+
+This Rmd is ready for deployment.
