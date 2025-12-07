@@ -12,8 +12,6 @@
 | batch simulation        | ✦ easy |      |      |      |      | loop wrapper ready       |
 | connect to VAE          |   ✔    |  ✔   |  ✔   |  ✔   |  ✔   | auto export              |
 
-This repository contains a **modular and extensible simulation engine** for studying  
-**VAE-based imputation vs. traditional IRT** under controlled data-generating scenarios.
 
 ---
 
@@ -88,17 +86,6 @@ These files are directly usable by Python VAE pipelines.
 
 ---
 
-## 4. Extensibility
-
-The system is designed to support future extensions:
-
-- multidimensional IRT  
-- graded response / polytomous items  
-- booklet forms with multiple blocks  
-- wrappers for batch simulation  
-- VAE integration modules  
-
----
 
 # Usage Guide
 
@@ -201,14 +188,9 @@ str(result, max.level = 1)
 
 ---
 
-## Notes & Best Practices
+## Notes
 
-1. **Always begin with S0** to ensure code stability.  
-2. **Do not modify core functions** when adding scenarios.  
-3. **Missingness should only be changed in config**.  
-4. **Use save_data=TRUE only when exporting to VAE**.  
-5. **S3 and S4 are realism tests**—expect IRT to misbehave intentionally.  
+1. **Missingness should only be changed in config**.  
+2. **Use save_data=TRUE when exporting**.  
 
 ---
-
-# End of README
