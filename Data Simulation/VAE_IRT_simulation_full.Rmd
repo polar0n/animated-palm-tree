@@ -264,12 +264,3 @@ res_S4 <- run_scenario(config_S4)
 
 ---
 
-# 4. Next Steps
-
-- Add polytomous data generation  
-- Add multidimensional latent space  
-- Add VAE interface  
-- Add evaluation metrics (bias/RMSE/imputation accuracy)  
-- Add batch simulation wrapper  
-
-This Rmd is ready for deployment.
