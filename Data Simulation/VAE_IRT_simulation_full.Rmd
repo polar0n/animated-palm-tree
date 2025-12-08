@@ -29,6 +29,10 @@ knitr::opts_chunk$set(
 )
 ```
 
+```{r}
+library(MASS) # For writing out matrices.
+```
+
 # 1. Core Simulation Functions
 
 ## 1.1 simulate_irt_data()
