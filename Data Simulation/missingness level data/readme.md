@@ -6,7 +6,8 @@ This folder contains simulated datasets generated for the VAE–IRT imputation e
 
 --
 
-Usage for VAE Imputation
+Usage for VAE Imputation and IRT Imputation
+
 	•	Use X_obs as the model input
 	•	Use mask to restrict the reconstruction loss to originally missing entries
 	•	Evaluate imputation quality with:rmse <- sqrt(mean((X_imputed[mask] - X_full[mask])^2))
