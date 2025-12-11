@@ -3,6 +3,7 @@ This folder contains simulated datasets generated for the VAE–IRT imputation e
 	•	X_obs：the observed response matrix with missing values (NA)，for VAE input
 	•	X_full：the complete response matrix without missingness，for evaluating imputation accuracy（ground truth）。
 	•	X_mask：the missingness indicator matrix (TRUE = originally missing)
+
 --
 
 Usage for VAE Imputation
