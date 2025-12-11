@@ -1,21 +1,5 @@
 # Data Simulation Framework 
 
-## Feature Overview
-
-| Feature                 |   S0   |  S1  |  S2  |  S3  |  S4  | Future                   |
-| ----------------------- | :----: | :--: | :--: | :--: | :--: | ------------------------ |
-| 2PL/3PL data generation |   ✔    |  ✔   |  ✔   |  ✔   |  ✔   | multidimensional?        |
-| MAR/MNAR                |        |      |  ✔   |  ✔   |  ✔   | add missing-rule library |
-| mixture distributions   |        |      |      |  ✔   |      | mixture of K groups      |
-| booklet design          |        |      |      |      |  ✔   | random block design      |
-| polytomous items        |   –    |  –   |  –   |  –   |  –   | add GRM/GPCM module      |
-| batch simulation        | ✦ easy |      |      |      |      | loop wrapper ready       |
-| connect to VAE          |   ✔    |  ✔   |  ✔   |  ✔   |  ✔   | auto export              |
-
-
----
-
-# Overview of the Simulation Framework Structure
 
 This framework is organized into **four main layers**:
 
