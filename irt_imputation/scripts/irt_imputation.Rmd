@@ -1,0 +1,79 @@
+---
+title: "irt_imputation"
+output: html_document
+date: "2025-12-11"
+---
+
+```{r }
+library(mirt)
+
+irt_impute_scenario <- function(prefix, n_factors = 1) {
+  message("Running IRT imputation for: ", prefix)
+
+  # ---------- 1. Load data ----------
+  X_obs  <- as.matrix(read.csv(paste0(prefix, "_X_obs.csv")))
+  X_full <- as.matrix(read.csv(paste0(prefix, "_X_full.csv")))
+  mask   <- as.matrix(read.csv(paste0(prefix, "_mask.csv")))
+  mask   <- mask != 0  # ensure logical
+
+  message("Loading data done")
+
+  # ---------- 2. Fit 2PL model ----------
+  mod <- mirt(X_obs, n_factors, itemtype = "2PL", verbose = FALSE)
+
+  # ---------- 3. Get person scores ----------
+  Theta <- fscores(mod, method = "EAP")  # N × n_factors
+  N <- nrow(Theta)
+  I <- ncol(X_obs)
+
+  # ---------- 4. Compute predicted probabilities ----------
+  P <- matrix(NA, nrow = N, ncol = I)
+
+  for (j in 1:I) {
+    item_j <- extract.item(mod, j)
+    pt <- probtrace(item_j, Theta)   # returns P(X=0), P(X=1)
+    P[, j] <- pt[, 2]
+  }
+
+  # ---------- 5. Build imputed matrix ----------
+  X_imp <- X_obs
+  X_imp[mask] <- P[mask]
+
+  out_file <- paste0(prefix, "_X_IRT_imputed.csv")
+  write.csv(X_imp, out_file, row.names = FALSE)
+  message("Saved IRT imputed matrix to: ", out_file)
+
+  # ---------- 6. Identify people with NO observed responses ----------
+  valid_rows <- rowSums(!is.na(X_obs)) > 0
+  num_removed <- sum(!valid_rows)
+
+  if (num_removed > 0) {
+    message("Excluded ", num_removed, " persons with 100% missing responses from RMSE evaluation.")
+  }
+
+  # ---------- 7. Build evaluation mask ----------
+  eval_mask <- mask
+  eval_mask[!valid_rows, ] <- FALSE  # those people are not used in RMSE
+
+  # ---------- 8. RMSE on missing-but-evaluable entries ----------
+  rmse <- sqrt(mean((X_imp[eval_mask] - X_full[eval_mask])^2))
+
+  message(prefix, " | IRT RMSE on missing cells: ", round(rmse, 4))
+
+  return(invisible(list(
+    model = mod,
+    Theta = Theta,
+    X_imputed = X_imp,
+    eval_mask = eval_mask,
+    rmse = rmse,
+    removed_persons = num_removed
+  )))
+}
+# ---------- 9. Run for all MCAR scenarios ----------：
+setwd("~/Desktop/sem2/irtimputation")  
+
+for (p in c("MCAR40", "MCAR50", "MCAR60", "MCAR70")) {
+  irt_impute_scenario(p)
+}
+```
+
