@@ -41,7 +41,7 @@ MCAR40 | IRT RMSE on missing cells: 0.4231
 
 ---
 
-## 📌 Notes
+##  Notes
 
 - Imputation uses **expected probabilities** rather than hard 0/1 classification.  
 - Examinees with no observed responses cannot receive θ estimates; they are excluded from RMSE computation.  
