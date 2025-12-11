@@ -17,4 +17,4 @@ Usage for VAE and IRT Imputation
 
 	•	Use X_obs as the model input.
 	•	Use X_mask to restrict the reconstruction loss to originally missing entries.
-	•	Evaluate imputation quality using:
+	•	Evaluate imputation quality using:rmse <- sqrt(mean((X_imputed[mask] - X_full[mask])^2))
