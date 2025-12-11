@@ -77,3 +77,21 @@ for (p in c("MCAR40", "MCAR50", "MCAR60", "MCAR70")) {
 }
 ```
 
+Running IRT imputation for: MCAR40
+Loading data done
+Saved IRT imputed matrix to: MCAR40_X_IRT_imputed.csv
+MCAR40 | IRT RMSE on missing cells: 0.4231
+Running IRT imputation for: MCAR50
+Loading data done
+Saved IRT imputed matrix to: MCAR50_X_IRT_imputed.csv
+MCAR50 | IRT RMSE on missing cells: 0.4452
+Running IRT imputation for: MCAR60
+Loading data done
+Saved IRT imputed matrix to: MCAR60_X_IRT_imputed.csv
+MCAR60 | IRT RMSE on missing cells: 0.4455
+Running IRT imputation for: MCAR70
+Loading data done
+Warning: data contains response patterns with only NAs
+Saved IRT imputed matrix to: MCAR70_X_IRT_imputed.csv
+Excluded 6 persons with 100% missing responses from RMSE evaluation.
+MCAR70 | IRT RMSE on missing cells: 0.4403
