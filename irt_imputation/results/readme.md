@@ -7,6 +7,8 @@
 | MCAR                 | 50%          | 0.4452   |
 | MCAR                 | 60%          | 0.4455   |
 | MCAR                 | 70%          | 0.4403   |
+
+
 Note: For MCAR70, some examinees have 100% missing responses; RMSE may be unstable depending on exclusion rules.
 
 ## Varying Missingness Mechanism (Fixed Missingness ≈ 60%)
