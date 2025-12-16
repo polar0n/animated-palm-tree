@@ -83,28 +83,6 @@ Below is a quick-start guide for running scenarios and understanding settings.
 result <- run_scenario(config_S0)
 str(result, max.level = 1)
 ```
-
----
-
-## Choosing Scenarios
-
-| Scenario | Description               |
-| -------- | ------------------------- |
-| S0       | Ideal 2PL, no missingness |
-| S1       | MCAR                      |
-| S2A      | MAR                       |
-| S2B      | MNAR                      |
-| S3       | Mixture θ                 |
-| S4       | Booklet / matrix sampling |
-
-Switch scenario:
-
-```r
-result <- run_scenario(config_S3)
-```
-
----
-
 ## Controlling Missingness
 
 Missingness mechanism is set through:
@@ -112,38 +90,6 @@ Missingness mechanism is set through:
 ```r
 config$missing_mechanism
 ```
-
-### Examples:
-
-#### MCAR (S1)
-
-```r
-config_S1$missing_mechanism <- "MCAR"
-config_S1$missing_rate <- 0.4
-```
-
-#### MAR (S2A)
-
-```r
-config_S2A$missing_mechanism <- "MAR"
-config_S2A$mar_probs <- seq(0.1, 0.5, length.out = config_S2A$I)
-```
-
-#### MNAR (S2B)
-
-```r
-config_S2B$missing_mechanism <- "MNAR"
-config_S2B$mnar_fun <- function(x,p,i) ifelse(is.na(x)||x==0, 0.5, 0.1)
-```
-
-#### Custom booklet (S4)
-
-```r
-config_S4$missing_mechanism <- "custom"
-config_S4$custom_mask <- mask_custom
-```
-
----
 
 ## Saving Output
 
@@ -161,14 +107,6 @@ Produces:
 *_mask.csv
 ```
 
----
-
-## Full Example: Run S2B (MNAR)
-
-```r
-result <- run_scenario(config_S2B, save_data = TRUE)
-str(result, max.level = 1)
-```
 
 ---
 
