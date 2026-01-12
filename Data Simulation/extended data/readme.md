@@ -1,4 +1,6 @@
 
+In addition to standard MCAR, MAR, and ability-dependent MNAR settings Donald Rubin (1976), we consider several extended missingness scenarios that are frequently discussed in the psychometric literature. These include response-dependent non-ignorable missingness, where omissions depend on the latent response outcome (e.g., David Rose et al., 2010; Pieter Pohl, 2020), speeded test effects leading to not-reached items (Chris Glas & Pimentel, 2008), and planned missingness designs such as booklet or matrix sampling in large-scale assessments (Robert Mislevy et al., 1992). We further include population heterogeneity scenarios involving differential item functioning (DIF) and group-specific missingness to reflect violations of measurement invariance and fairness-relevant conditions (Holland & Wainer, 1993; Pohl & Carstensen, 2012). These extended scenarios are intended as targeted stress tests rather than as typical use cases, clarifying the conditions under which IRT-based imputation remains reliable or degrades.
+
 ### Core settings
 
 - **Number of examinees (N)**: 3000  
