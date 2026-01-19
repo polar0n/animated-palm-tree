@@ -12,9 +12,9 @@ The imputation procedure is implemented using a **2PL IRT model** fitted to the 
 - - Because item responses are binary (0/1), we evaluate imputation performance using binary cross-entropy (BCE), which corresponds to the negative log-likelihood under a Bernoulli model.
 Specifically, the imputed output \hat{x}_{ij}\in(0,1) is interpreted as the predicted probability p_{ij}=\Pr(x_{ij}=1). Therefore, BCE provides a probabilistically meaningful measure of how well the model predicts missing responses.
 
-To focus on imputation quality, BCE is computed only on missing entries, i.e., those positions where m_{ij}=0. This avoids conflating reconstruction performance on observed responses with the model’s ability to recover unobserved values.
+- - To focus on imputation quality, BCE is computed only on missing entries, i.e., those positions where m_{ij}=0. This avoids conflating reconstruction performance on observed responses with the model’s ability to recover unobserved values.
 
-In addition, we also report RMSE on missing cells as a complementary metric capturing the average numerical deviation between imputed values and the ground truth.
+- - In addition, we also report RMSE on missing cells as a complementary metric capturing the average numerical deviation between imputed values and the ground truth.
 
 ---
 
