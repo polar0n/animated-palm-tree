@@ -4,7 +4,7 @@ output: html_document
 date: "2025-12-11"
 ---
 
-```{r }
+```{r}
 library(mirt)
 
 irt_impute_scenario <- function(prefix, n_factors = 1) {
@@ -13,10 +13,18 @@ irt_impute_scenario <- function(prefix, n_factors = 1) {
   # ---------- 1. Load data ----------
   X_obs  <- as.matrix(read.csv(paste0(prefix, "_X_obs.csv")))
   X_full <- as.matrix(read.csv(paste0(prefix, "_X_full.csv")))
-  mask   <- as.matrix(read.csv(paste0(prefix, "_mask.csv")))
-  mask   <- mask != 0  # ensure logical
+  mask_raw <- as.matrix(read.csv(paste0(prefix, "_mask.csv")))
+
+  # IMPORTANT (based on your debug output):
+  # mask_raw != 0  means MISSING (not observed)
+  miss <- (mask_raw != 0)   # TRUE = missing cells
+  obs  <- !miss             # TRUE = observed cells
 
   message("Loading data done")
+  message("observed proportion: ", round(mean(obs), 4))
+  message("missing proportion: ", round(mean(miss), 4))
+  message("missing cells count: ", sum(miss))
+  message("X_obs NA count: ", sum(is.na(X_obs)))
 
   # ---------- 2. Fit 2PL model ----------
   mod <- mirt(X_obs, n_factors, itemtype = "2PL", verbose = FALSE)
@@ -27,17 +35,16 @@ irt_impute_scenario <- function(prefix, n_factors = 1) {
   I <- ncol(X_obs)
 
   # ---------- 4. Compute predicted probabilities ----------
-  P <- matrix(NA, nrow = N, ncol = I)
-
+  P <- matrix(NA_real_, nrow = N, ncol = I)
   for (j in 1:I) {
     item_j <- extract.item(mod, j)
-    pt <- probtrace(item_j, Theta)   # returns P(X=0), P(X=1)
+    pt <- probtrace(item_j, Theta)   # columns: P(X=0), P(X=1)
     P[, j] <- pt[, 2]
   }
 
-  # ---------- 5. Build imputed matrix ----------
+  # ---------- 5. Build imputed matrix (fill MISSING only) ----------
   X_imp <- X_obs
-  X_imp[mask] <- P[mask]
+  X_imp[miss] <- P[miss]
 
   out_file <- paste0(prefix, "_X_IRT_imputed.csv")
   write.csv(X_imp, out_file, row.names = FALSE)
@@ -46,52 +53,92 @@ irt_impute_scenario <- function(prefix, n_factors = 1) {
   # ---------- 6. Identify people with NO observed responses ----------
   valid_rows <- rowSums(!is.na(X_obs)) > 0
   num_removed <- sum(!valid_rows)
-
   if (num_removed > 0) {
-    message("Excluded ", num_removed, " persons with 100% missing responses from RMSE evaluation.")
+    message("Excluded ", num_removed,
+            " persons with 100% missing responses from evaluation.")
   }
 
-  # ---------- 7. Build evaluation mask ----------
-  eval_mask <- mask
-  eval_mask[!valid_rows, ] <- FALSE  # those people are not used in RMSE
+  # ---------- 7. Build evaluation mask: missing cells among valid persons ----------
+  eval_miss <- miss
+  eval_miss[!valid_rows, ] <- FALSE
+  eval_miss[is.na(X_full)] <- FALSE  # safety
 
-  # ---------- 8. RMSE on missing-but-evaluable entries ----------
-  rmse <- sqrt(mean((X_imp[eval_mask] - X_full[eval_mask])^2))
+  message("eval missing count: ", sum(eval_miss))
+  message("X_imp NA on eval missing: ", sum(is.na(X_imp[eval_miss])))
 
-  message(prefix, " | IRT RMSE on missing cells: ", round(rmse, 4))
+  if (sum(eval_miss) == 0) {
+    warning(prefix, ": no evaluable missing cells. Returning NA for metrics.")
+    rmse <- NA_real_
+    bce  <- NA_real_
+  } else {
+    # ---------- 8. RMSE on missing-but-evaluable entries ----------
+    rmse <- sqrt(mean((X_imp[eval_miss] - X_full[eval_miss])^2))
+
+    # ---------- 9. BCE (log loss) on missing-but-evaluable entries ----------
+    eps <- 1e-8
+    p <- pmin(pmax(X_imp, eps), 1 - eps)
+
+    bce <- -mean(
+      X_full[eval_miss] * log(p[eval_miss]) +
+        (1 - X_full[eval_miss]) * log(1 - p[eval_miss])
+    )
+  }
+
+  message(prefix,
+          " | IRT RMSE (missing): ", ifelse(is.na(rmse), "NA", round(rmse, 4)),
+          " | IRT BCE (missing): ", ifelse(is.na(bce),  "NA", round(bce,  4)))
 
   return(invisible(list(
     model = mod,
     Theta = Theta,
+    P = P,
     X_imputed = X_imp,
-    eval_mask = eval_mask,
+    miss_mask = miss,
+    eval_miss = eval_miss,
     rmse = rmse,
+    bce = bce,
     removed_persons = num_removed
   )))
 }
-# ---------- 9. Run for all MCAR scenarios ----------：
-setwd("~/Desktop/sem2/irtimputation")  
+```
+
+
+```{r}
+setwd("~/Desktop/sem2/irtimputation")
 
 for (p in c("MCAR40", "MCAR50", "MCAR60", "MCAR70")) {
   irt_impute_scenario(p)
 }
 ```
 
-Running IRT imputation for: MCAR40
-Loading data done
-Saved IRT imputed matrix to: MCAR40_X_IRT_imputed.csv
-MCAR40 | IRT RMSE on missing cells: 0.4231
-Running IRT imputation for: MCAR50
-Loading data done
-Saved IRT imputed matrix to: MCAR50_X_IRT_imputed.csv
-MCAR50 | IRT RMSE on missing cells: 0.4452
-Running IRT imputation for: MCAR60
-Loading data done
-Saved IRT imputed matrix to: MCAR60_X_IRT_imputed.csv
-MCAR60 | IRT RMSE on missing cells: 0.4455
-Running IRT imputation for: MCAR70
-Loading data done
-Warning: data contains response patterns with only NAs
-Saved IRT imputed matrix to: MCAR70_X_IRT_imputed.csv
-Excluded 6 persons with 100% missing responses from RMSE evaluation.
-MCAR70 | IRT RMSE on missing cells: 0.4403
+
+```{r}
+setwd("~/Desktop/sem2/irtimputation/mach")  
+
+for (p in c("MCAR60", "MAR60", "MNAR60")) {
+  irt_impute_scenario(p)
+}
+```
+
+
+
+```{r}
+setwd("~/Desktop")
+
+scenarios <- c(
+
+  # extended (1–5)
+  "MNAR_Y1", "MNAR_Y2",
+  "NR_simple", "NR_speed",
+  "Booklet50_MCAR20",
+
+  # heterogeneity (6–8)
+  "DIFMCAR60", "DIFMNARth60",
+  "GroupMAR60"
+)
+
+for (p in scenarios) {
+  message("Running imputation for: ", p)
+  irt_impute_scenario(p)
+}
+```
