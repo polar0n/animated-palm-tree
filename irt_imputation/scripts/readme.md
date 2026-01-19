@@ -8,7 +8,7 @@ The imputation procedure is implemented using a **2PL IRT model** fitted to the 
 - Imputes missing responses based on these probabilities
 - Excludes examinees with 100% missing responses from RMSE evaluation
 - Saves the imputed response matrix (`*_X_IRT_imputed.csv`)
-- Reports RMSE on missing entries
+- Reports RMSE and BCE on missing entries
 
 ---
 
